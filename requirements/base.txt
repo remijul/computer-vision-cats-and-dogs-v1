@@ -1,0 +1,21 @@
+# Core dependencies
+#numpy
+#pandas
+#matplotlib
+#keras
+#tensorflow
+#pydot
+#pydotplus
+#graphviz
+
+jinja2
+fastapi
+uvicorn
+python-multipart
+pandas
+matplotlib
+keras
+tensorflow
+pillow
+numpy
+httpx
