@@ -19,3 +19,5 @@ tensorflow
 pillow
 numpy
 httpx
+requests
+python-dotenv

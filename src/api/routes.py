@@ -1,21 +1,34 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from .auth import verify_token
-from ..model.predictor import CatDogPredictor
-from config.settings import API_CONFIG
+import sys
 from pathlib import Path
+import time
+
+# Ajouter le répertoire racine au path
+ROOT_DIR = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(ROOT_DIR))
+
+from .auth import verify_token
+from src.models.predictor import CatDogPredictor
+from src.monitoring.metrics import time_inference, log_inference_time
+
+# Configuration des templates
+TEMPLATES_DIR = ROOT_DIR / "src" / "web" / "templates"
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 router = APIRouter()
-templates = Jinja2Templates(directory="src/web/templates")
 
 # Initialisation du prédicteur
-predictor = CatDogPredictor(API_CONFIG["model_path"])
+predictor = CatDogPredictor()
 
 @router.get("/", response_class=HTMLResponse)
 async def welcome(request: Request):
     """Page d'accueil avec interface web"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "model_loaded": predictor.is_loaded()
+    })
 
 @router.get("/info", response_class=HTMLResponse)
 async def info_page(request: Request):
@@ -26,7 +39,8 @@ async def info_page(request: Request):
         "description": "Modèle CNN pour classification chats/chiens",
         "parameters": predictor.model.count_params() if predictor.is_loaded() else 0,
         "classes": ["Cat", "Dog"],
-        "input_size": f"{API_CONFIG.get('image_size', (128, 128))[0]}x{API_CONFIG.get('image_size', (128, 128))[1]}"
+        "input_size": f"{predictor.image_size[0]}x{predictor.image_size[1]}",
+        "model_loaded": predictor.is_loaded()
     }
     return templates.TemplateResponse("info.html", {
         "request": request, 
@@ -36,14 +50,18 @@ async def info_page(request: Request):
 @router.get("/inference", response_class=HTMLResponse)
 async def inference_page(request: Request):
     """Page d'inférence"""
-    return templates.TemplateResponse("inference.html", {"request": request})
+    return templates.TemplateResponse("inference.html", {
+        "request": request,
+        "model_loaded": predictor.is_loaded()
+    })
 
 @router.post("/api/predict")
+@time_inference  # Décorateur de monitoring
 async def predict_api(
     file: UploadFile = File(...),
     token: str = Depends(verify_token)
 ):
-    """API de prédiction"""
+    """API de prédiction avec monitoring"""
     if not predictor.is_loaded():
         raise HTTPException(status_code=503, detail="Modèle non disponible")
     
@@ -54,7 +72,7 @@ async def predict_api(
         image_data = await file.read()
         result = predictor.predict(image_data)
         
-        return {
+        response_data = {
             "filename": file.filename,
             "prediction": result["prediction"],
             "confidence": f"{result['confidence']:.2%}",
@@ -64,7 +82,33 @@ async def predict_api(
             }
         }
         
+        return response_data
+        
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
+
+        # Logger les métriques
+        log_inference_time(
+            inference_time_ms=inference_time_ms,
+            filename=file.filename,
+            prediction=result["prediction"],
+            confidence=f"{result['confidence']:.2%}",
+            success=True
+        )
+        
+        return response_data
+        
+    except Exception as e:
+        # En cas d'erreur, logger quand même le temps
+        end_time = time.perf_counter()
+        inference_time_ms = (end_time - start_time) * 1000
+        
+        log_inference_time(
+            inference_time_ms=inference_time_ms,
+            filename=file.filename if file else "unknown",
+            success=False
+        )
+        
         raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
 
 @router.get("/api/info")
@@ -72,6 +116,15 @@ async def api_info():
     """Informations API JSON"""
     return {
         "model_loaded": predictor.is_loaded(),
-        "model_path": str(API_CONFIG["model_path"]),
-        "version": "1.0.0"
+        "model_path": str(predictor.model_path),
+        "version": "1.0.0",
+        "parameters": predictor.model.count_params() if predictor.is_loaded() else 0
+    }
+
+@router.get("/health")
+async def health_check():
+    """Vérification de l'état de l'API"""
+    return {
+        "status": "healthy",
+        "model_loaded": predictor.is_loaded()
     }

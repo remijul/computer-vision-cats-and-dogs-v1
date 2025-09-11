@@ -10,7 +10,6 @@ sys.path.insert(0, str(ROOT_DIR))
 
 if __name__ == "__main__":
     import uvicorn
-    from src.api.main import app
     from config.settings import API_CONFIG
     
     print("Lancement de l'API Cats vs Dogs")
@@ -18,8 +17,8 @@ if __name__ == "__main__":
     print(f"Docs: http://{API_CONFIG['host']}:{API_CONFIG['port']}/docs")
     
     uvicorn.run(
-        app,
+        "src.api.main:app",
         host=API_CONFIG["host"],
         port=API_CONFIG["port"],
-        reload=True
+        reload=False  # En production Docker
     )
