@@ -1,15 +1,14 @@
-# Template Data IA MLOps
+# Computer Vision - Classification d'images Cats & Dogs
 
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![FAST Api](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Docker](https://img.shields.io/badge/docker-257bd6?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Keras](https://img.shields.io/badge/Keras-%23D00000.svg?style=for-the-badge&logo=Keras&logoColor=white)](https://keras.io/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=for-the-badge)](CONTRIBUTING.md)
 
 <div align="center">
 
-<h3>Template de projet GitHub pour les projets data science, IA et MLOps.
-<br>Structure simple et flexible qui s'adapte à tes besoins.</br></h3>
+<h3>Classification d'images avec Keras et exposition du modèle via Fast API</br></h3>
 
 [Explore the docs](docs/)
 
@@ -17,13 +16,16 @@
 
 ---
 
-## 🚀 Démarrage rapide
+## 📌 Introduction
 
-1. **Utilise ce template** en cliquant sur "Use this template" sur GitHub
-2. **Clone ton nouveau repo** : `git clone <ton-repo>`
-3. **Configure l'environnement** : `cp .env.example .env`
-4. **Installe les dépendances** : `pip install -r requirements/dev.txt`
-5. **Lance les tests** : `make test`
+Ce projet est à vocation pédagogique sur des thématiques IA et MLOps. Il permet de réaliser des tâches de Computer Vision et spécifiquement de la classification d'images par la reconnaissance de chats et de chiens.  
+Il est composé de :
+
+- Un modèle de computer vision développé avec Keras 3 selon une architecture CNN. Voir le tutoriel Keras ([lien](https://keras.io/examples/vision/image_classification_from_scratch/)).
+- Un service API développé avec Fast API, qui permet notamment de réaliser les opérations d'inférence (i.e prédiction), sur la route `/api/predict`.
+- Une application web minimaliste (templates Jinja2).
+- Des tests automatisés minimalistes (pytest).
+- Un pipeline CI/CD minimaliste (Github Action).
 
 ## 📁 Structure du projet
 
@@ -32,26 +34,27 @@ project-name/
 ├── .github/
 │   ├── workflows/           # CI/CD pipelines
 │   └── ISSUE_TEMPLATE/      # Templates d'issues
+├── config/                  # Fichiers de configuration
+├── data/
+│   ├── raw/                 # Données brutes (gitignored)
+│   ├── processed/           # Données traitées (gitignored)
+│   └── external/            # Données externes/références
+├── docker/                  # Dockerfiles et compose
+├── docs/                    # Documentation
+├── notebooks/               # Jupyter notebooks pour exploration
+├── requirements/            # Dépendances par environnement
+│   ├── base.txt
+│   ├── dev.txt
+│   └── prod.txt
+├── scripts/                 # Scripts d'automatisation/déploiement
 ├── src/                     # Code source principal
 │   ├── api/                 # APIs et services web
 │   ├── data/                # Scripts de traitement des données
 │   ├── models/              # Modèles ML/IA
 │   ├── monitoring/          # Monitoring des modèles
-│   └── utils/               # Utilitaires partagés
-├── data/
-│   ├── raw/                 # Données brutes (gitignored)
-│   ├── processed/           # Données traitées (gitignored)
-│   └── external/            # Données externes/références
-├── notebooks/               # Jupyter notebooks pour exploration
-├── config/                  # Fichiers de configuration
-├── docker/                  # Dockerfiles et compose
-├── docs/                    # Documentation
+│   ├── utils/               # Utilitaires partagés
+│   └── web/                 # Templates jinja2
 ├── tests/                   # Tests unitaires et d'intégration
-├── scripts/                 # Scripts d'automatisation/déploiement
-├── requirements/            # Dépendances par environnement
-│   ├── base.txt
-│   ├── dev.txt
-│   └── prod.txt
 ├── .env.example             # Variables d'environnement exemple
 ├── .gitignore
 ├── README.md
@@ -59,36 +62,38 @@ project-name/
 └── pyproject.toml           # Configuration Python/packaging
 ```
 
-## 🛠 Commandes utiles
+## 🛠️ Commandes utiles
+
+*Section minimaliste à faire évoluer.*
 
 ```bash
-make install        # Installer les dépendances
-make test          # Lancer les tests
-make lint          # Vérifier le code
-make docker-build  # Construire l'image Docker
-make clean         # Nettoyer les fichiers temporaires
+make env           # Installer les dépendances dans un environnement virtuel
 ```
 
-## 🔧 Configuration
+## 🎯 API
 
-1. Copie `.env.example` vers `.env`
-2. Adapte les variables selon ton projet
-3. Configure tes secrets GitHub pour le CI/CD
+Lorsque l'environnement virtuel est activé, vous pouvez lancer le serveur de l'API ...
 
-## 📊 Types de projets supportés
+```bash
+python scripts/run_api.py
+```
 
-- **Data Science** : Analyse exploratoire, pipelines de données
-- **Machine Learning** : Entraînement, évaluation, déploiement
-- **APIs** : Services REST/GraphQL, microservices
-- **MLOps** : CI/CD, monitoring, versioning des modèles
+... et visiter la page de documentation Swagger :
 
-## 🤝 Contribution
+![Swagger](/docs/img/swagger.png "Page de documentation de l'API")
 
-1. Fork le projet
-2. Crée ta branche (`git checkout -b feature/amelioration`)
-3. Commit tes changes (`git commit -m 'Ajout fonctionnalité'`)
-4. Push vers la branche (`git push origin feature/amelioration`)
-5. Ouvre une Pull Request
+## 📊 Application web
+
+Lorsque l'environnement virtuel est activé, vous pouvez lancer le serveur de l'API ...
+
+```bash
+python scripts/run_api.py
+```
+
+... et utiliser l'application web :
+
+![Web APP](/docs/img/web.png "Application web du projet")
 
 ## 📄 Licence
+
 MIT - voir LICENSE pour plus de détails.
