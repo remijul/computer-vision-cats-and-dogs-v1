@@ -87,6 +87,7 @@ async def predict_api(
 
 @router.post("/api/feedback")
 async def submit_feedback(
+    log_id: int = Form(...),
     feedback: bool = Form(...),
     predict_result: str = Form(...),
     input_image: UploadFile = File(...),
@@ -96,6 +97,7 @@ async def submit_feedback(
     Soumettre un feedback utilisateur pour l'ajouter à la base de données
     
     Args:
+        log_id (int): L'ID du log d'inférence associé.
         feedback (bool): Le feedback utilisateur.
         predict_result (str): Le résultat de la prédiction associée.
         input_image (UploadFile): L'image d'entrée associée.
@@ -110,9 +112,9 @@ async def submit_feedback(
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO feedbacks (feedback, timestamp, predict_result, input_image)
-                VALUES (?, ?, ?, ?)
-            ''', (feedback, timestamp, predict_result, image_bytes))
+                INSERT INTO feedbacks (log_id, feedback, timestamp, predict_result, input_image)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (log_id, feedback, timestamp, predict_result, image_bytes))
             conn.commit()
         return {"detail": "Feedback soumis avec succès."}
     except Exception as e:
