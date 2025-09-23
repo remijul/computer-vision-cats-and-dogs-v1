@@ -1,4 +1,5 @@
 import csv
+import logging
 import time
 from datetime import datetime
 from pathlib import Path
@@ -11,6 +12,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
 from src.utils.database import get_db_connection, close_db_connection
+from fastapi import HTTPException
  
 # Fichier CSV pour stocker les métriques
 MONITORING_FILE = PROCESSED_DATA_DIR / "monitoring_inference.csv"
@@ -50,9 +52,16 @@ def time_inference(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
+        logging.debug(f"Starting inference timing for {func.__name__}")
         try:
             result = await func(*args, **kwargs)
             success = True
+        except HTTPException as e:
+            # Log quand même l'échec, puis relance l'exception pour FastAPI
+            end_time = time.perf_counter()
+            inference_time_ms = (end_time - start_time) * 1000
+            log_inference_time(inference_time_ms=inference_time_ms, success=False)
+            raise
         except Exception as e:
             result = e
             success = False

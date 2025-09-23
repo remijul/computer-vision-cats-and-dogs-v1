@@ -69,9 +69,9 @@ async def predict_api(
 ):
     """API de prédiction avec monitoring"""
     if not predictor.is_loaded():
-        return {"error": "Modèle non disponible"}
+        raise HTTPException(status_code=503, detail="Modèle non disponible")
     if not file.content_type.startswith('image/'):
-        return {"error": "Format d'image invalide"}
+        raise HTTPException(status_code=400, detail="Format d'image invalide")
     image_data = await file.read()
     result = predictor.predict(image_data)
     response_data = {

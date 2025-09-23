@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT_DIR))
 from config.settings import DATA_DIR, API_CONFIG
 
 # Configuration globale des tests
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8001"
 TOKEN = API_CONFIG["token"]
 TEST_IMAGE_PATH = None
 
@@ -161,6 +161,7 @@ class TestPrediction:
         assert "prediction" in data
         assert "confidence" in data
         assert "probabilities" in data
+        assert "log_id" in data
         assert data["prediction"] in ["Cat", "Dog"]
         
         # Vérifier les probabilités
@@ -232,7 +233,7 @@ class TestAPIResponseFormat:
         data = response.json()
         
         # Vérifier la structure de la réponse
-        required_fields = ["filename", "prediction", "confidence", "probabilities"]
+        required_fields = ["filename", "prediction", "confidence", "probabilities", "log_id"]
         for field in required_fields:
             assert field in data, f"Champ manquant: {field}"
         
@@ -245,6 +246,101 @@ class TestAPIResponseFormat:
         # Vérifier que les pourcentages sont bien formatés
         assert probs["cat"].endswith("%")
         assert probs["dog"].endswith("%")
+
+class TestFeedback:
+    """Tests pour le endpoint de feedback"""
+    
+    def test_feedback_success(self, test_image):
+        """Feedback valide avec tous les champs"""
+        headers = {"Authorization": f"Bearer {TOKEN}"}
+        with open(test_image, "rb") as f:
+            files = {"file": (test_image.name, f, "image/jpeg")}
+            response = requests.post(f"{BASE_URL}/api/predict", files=files, headers=headers)
+        data = response.json()
+        log_id = data.get("log_id", 1)
+
+        with open(test_image, "rb") as f:
+            files = {"input_image": (test_image.name, f, "image/jpeg")}
+            data_form = {
+                "log_id": log_id,
+                "feedback": True,
+                "predict_result": "Cat"
+            }
+            response = requests.post(
+                f"{BASE_URL}/api/feedback",
+                files=files,
+                data=data_form,
+                headers=headers
+            )
+        assert response.status_code == 200
+        assert "Feedback soumis" in response.text
+
+    def test_feedback_no_auth(self, test_image):
+        """Feedback sans authentification"""
+        with open(test_image, "rb") as f:
+            files = {"input_image": (test_image.name, f, "image/jpeg")}
+            data_form = {
+                "log_id": 1,
+                "feedback": True,
+                "predict_result": "Cat"
+            }
+            response = requests.post(
+                f"{BASE_URL}/api/feedback",
+                files=files,
+                data=data_form
+            )
+        assert response.status_code in [401, 403]
+
+    def test_feedback_missing_log_id(self, test_image):
+        """Feedback sans log_id"""
+        headers = {"Authorization": f"Bearer {TOKEN}"}
+        with open(test_image, "rb") as f:
+            files = {"input_image": (test_image.name, f, "image/jpeg")}
+            data_form = {
+                # "log_id" manquant
+                "feedback": True,
+                "predict_result": "Cat"
+            }
+            response = requests.post(
+                f"{BASE_URL}/api/feedback",
+                files=files,
+                data=data_form,
+                headers=headers
+            )
+        assert response.status_code == 422
+
+    def test_feedback_missing_image(self):
+        """Feedback sans image"""
+        headers = {"Authorization": f"Bearer {TOKEN}"}
+        data_form = {
+            "log_id": 1,
+            "feedback": True, 
+            "predict_result": "Cat"
+        }
+        response = requests.post(
+            f"{BASE_URL}/api/feedback",
+            data=data_form,
+            headers=headers
+        )
+        assert response.status_code == 422
+
+    def test_feedback_invalid_token(self, test_image):
+        """Feedback avec mauvais token"""
+        headers = {"Authorization": "Bearer MAUVAIS_TOKEN"}
+        with open(test_image, "rb") as f:
+            files = {"input_image": (test_image.name, f, "image/jpeg")}
+            data_form = {
+                "log_id": 1,
+                "feedback": True,
+                "predict_result": "Cat"
+            }
+            response = requests.post(
+                f"{BASE_URL}/api/feedback",
+                files=files,
+                data=data_form,
+                headers=headers
+            )
+        assert response.status_code == 401
 
 # Tests paramétrés pour plusieurs endpoints
 @pytest.mark.parametrize("endpoint,expected_status", [
