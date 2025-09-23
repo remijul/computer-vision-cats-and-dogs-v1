@@ -1,9 +1,14 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi import Form
+from datetime import datetime
 import sys
 from pathlib import Path
 import time
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Ajouter le répertoire racine au path
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -11,7 +16,8 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from .auth import verify_token
 from src.models.predictor import CatDogPredictor
-from src.monitoring.metrics import time_inference, log_inference_time
+from src.monitoring.metrics import time_inference
+from src.utils.database import get_db_connection, close_db_connection
 
 # Configuration des templates
 TEMPLATES_DIR = ROOT_DIR / "src" / "web" / "templates"
@@ -63,53 +69,56 @@ async def predict_api(
 ):
     """API de prédiction avec monitoring"""
     if not predictor.is_loaded():
-        raise HTTPException(status_code=503, detail="Modèle non disponible")
-    
+        return {"error": "Modèle non disponible"}
     if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Format d'image invalide")
-    
-    try:
-        image_data = await file.read()
-        result = predictor.predict(image_data)
-        
-        response_data = {
-            "filename": file.filename,
-            "prediction": result["prediction"],
-            "confidence": f"{result['confidence']:.2%}",
-            "probabilities": {
-                "cat": f"{result['probabilities']['cat']:.2%}",
-                "dog": f"{result['probabilities']['dog']:.2%}"
-            }
+        return {"error": "Format d'image invalide"}
+    image_data = await file.read()
+    result = predictor.predict(image_data)
+    response_data = {
+        "filename": file.filename,
+        "prediction": result["prediction"],
+        "confidence": f"{result['confidence']:.2%}",
+        "probabilities": {
+            "cat": f"{result['probabilities']['cat']:.2%}",
+            "dog": f"{result['probabilities']['dog']:.2%}"
         }
-        
-        return response_data
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
+    }
+    return response_data
 
-        # Logger les métriques
-        log_inference_time(
-            inference_time_ms=inference_time_ms,
-            filename=file.filename,
-            prediction=result["prediction"],
-            confidence=f"{result['confidence']:.2%}",
-            success=True
-        )
+@router.post("/api/feedback")
+async def submit_feedback(
+    feedback: bool = Form(...),
+    predict_result: str = Form(...),
+    input_image: UploadFile = File(...),
+    token: str = Depends(verify_token)
+):
+    """
+    Soumettre un feedback utilisateur pour l'ajouter à la base de données
+    
+    Args:
+        feedback (bool): Le feedback utilisateur.
+        predict_result (str): Le résultat de la prédiction associée.
+        input_image (UploadFile): L'image d'entrée associée.
         
-        return response_data
-        
+    Returns:
+        dict: Un message de confirmation.
+    """
+    try:
+        logging.debug("Route /api/feedback appelée")
+        timestamp = datetime.now().isoformat()
+        image_bytes = await input_image.read()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO feedbacks (feedback, timestamp, predict_result, input_image)
+                VALUES (?, ?, ?, ?)
+            ''', (feedback, timestamp, predict_result, image_bytes))
+            conn.commit()
+        return {"detail": "Feedback soumis avec succès."}
     except Exception as e:
-        # En cas d'erreur, logger quand même le temps
-        end_time = time.perf_counter()
-        inference_time_ms = (end_time - start_time) * 1000
-        
-        log_inference_time(
-            inference_time_ms=inference_time_ms,
-            filename=file.filename if file else "unknown",
-            success=False
-        )
-        
-        raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
+        logging.error(f"Erreur lors de l'enregistrement du feedback : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur serveur interne : {str(e)}")
+    
 
 @router.get("/api/info")
 async def api_info():

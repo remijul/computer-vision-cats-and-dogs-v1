@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
 from src.utils.database import get_db_connection, close_db_connection
-
+ 
 # Fichier CSV pour stocker les métriques
 MONITORING_FILE = PROCESSED_DATA_DIR / "monitoring_inference.csv"
 
@@ -26,7 +26,7 @@ def ensure_monitoring_file():
                 'success'
             ])
 
-def log_inference_time(inference_time_ms: float, success: bool) -> None:
+def log_inference_time(inference_time_ms: float, success: bool):
     """
     Logger le temps d'inférence dans la base de données
 
@@ -42,51 +42,29 @@ def log_inference_time(inference_time_ms: float, success: bool) -> None:
             VALUES (?, ?, ?)
         ''', (timestamp, inference_time_ms, success))
         conn.commit()
+        # retourne l'id du log inséré
+        log_id = cursor.lastrowid
+    return log_id
 
 def time_inference(func):
-    """Décorateur pour mesurer le temps d'inférence"""
     @wraps(func)
     async def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
-        
         try:
             result = await func(*args, **kwargs)
-            end_time = time.perf_counter()
-            
-            # Calculer le temps en millisecondes
-            inference_time_ms = (end_time - start_time) * 1000
-            
-            # Extraire les informations du résultat si possible
-            if hasattr(result, 'body'):
-                # FastAPI Response object
-                import json
-                try:
-                    response_data = json.loads(result.body)
-                    log_inference_time(
-                        inference_time_ms=inference_time_ms,
-                        success=True
-                    )
-                except:
-                    log_inference_time(inference_time_ms, success=True)
-            else:
-                # Dict response
-                log_inference_time(
-                    inference_time_ms=inference_time_ms,
-                    success=True
-                )
-            
-            return result
-            
+            success = True
         except Exception as e:
-            end_time = time.perf_counter()
-            inference_time_ms = (end_time - start_time) * 1000
-            
-            # Logger l'erreur
-            log_inference_time(
-                inference_time_ms=inference_time_ms,
-                success=False
-            )
-            
-            raise e
-    
+            result = e
+            success = False
+        end_time = time.perf_counter()
+        inference_time_ms = (end_time - start_time) * 1000
+        log_id = log_inference_time(inference_time_ms=inference_time_ms, success=success)
+        # Toujours renvoyer log_id dans la réponse, même en cas d'erreur
+        if isinstance(result, dict):
+            result["log_id"] = log_id
+            return result
+        elif not success:
+            # Retourne une réponse d'erreur standardisée avec log_id
+            return {"error": str(result), "log_id": log_id}
+        return result
     return wrapper

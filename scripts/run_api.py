@@ -3,7 +3,9 @@
 
 import sys
 from pathlib import Path
+import logging
 
+logging.basicConfig(level=logging.DEBUG, force=True)
 # Ajouter le répertoire racine au path
 ROOT_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT_DIR))
@@ -20,5 +22,5 @@ if __name__ == "__main__":
         "src.api.main:app",
         host=API_CONFIG["host"],
         port=API_CONFIG["port"],
-        reload=False  # En production Docker
+        log_level="debug"
     )

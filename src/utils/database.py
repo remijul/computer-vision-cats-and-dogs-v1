@@ -16,32 +16,58 @@ def get_db_connection() -> Connection:
     """
     if os.path.exists(db_path) == False:
         open(db_path, 'w').close()
-    # si elles n'existent pas, créer les tables feedbacks et logs
-    if os.path.exists(db_path) and os.path.getsize(db_path) == 0:
+    # si elles n'existent pas, créer les tables feedbacks et logs, seulement si les tables n'existent pas
+    if os.path.exists(db_path):
+        # vérifier les tables existantes
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute('''
-            CREATE TABLE logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                inference_time_ms REAL NOT NULL,
-                success BOOLEAN NOT NULL
-            )
+            SELECT name FROM sqlite_master WHERE type='table' AND name='logs';
         ''')
+        logs_table_exists = cursor.fetchone() is not None
+
         cursor.execute('''
-            CREATE TABLE feedbacks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                feedback TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                predict_result TEXT NOT NULL,
-                input_image BLOB NOT NULL
-            )
+            SELECT name FROM sqlite_master WHERE type='table' AND name='feedbacks';
         ''')
-        conn.commit()
+        feedbacks_table_exists = cursor.fetchone() is not None
+
         cursor.close()
-        print(
-            f"Database created at {db_path} (if it doesn't exist).",
-        )
+
+        if not logs_table_exists:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                    inference_time_ms REAL NOT NULL,
+                    success BOOLEAN NOT NULL
+                )
+            ''')
+            conn.commit()
+            cursor.close()
+            print(
+                f"Table 'logs' created in database at {db_path} (if it doesn't exist).",
+            )
+        if not feedbacks_table_exists:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE feedbacks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    feedback BOOLEAN NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                    predict_result TEXT NOT NULL,
+                    input_image BLOB NOT NULL,
+                    log_id INTEGER NOT NULL,
+                    FOREIGN KEY (log_id) REFERENCES logs(id)
+                )
+            ''')
+            conn.commit()
+            cursor.close()
+            print(
+                f"Table 'feedbacks' created in database at {db_path} (if it doesn't exist).",
+            )
     conn = sqlite3.connect(db_path)
     return conn
 

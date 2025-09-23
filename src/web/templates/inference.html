@@ -47,6 +47,8 @@
                 </div>
                 
                 <div id="result" class="mt-4" style="display: none;"></div>
+                <div id="feedbackButtons" class="mt-3"></div>
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -78,6 +80,7 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
     const loading = document.getElementById('loading');
     const result = document.getElementById('result');
     const predictBtn = document.getElementById('predictBtn');
+    const feedbackButtons = document.getElementById('feedbackButtons');
     
     const file = fileInput.files[0];
     const token = tokenInput.value;
@@ -137,7 +140,28 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         }
         
         result.style.display = 'block';
-        
+
+        // Boutons de feedback
+        feedbackButtons.innerHTML = `
+            <div class="d-flex justify-content-center">
+            <button id="feedbackYes" class="btn btn-success me-2 feedback-btn">
+                <i class="bi bi-hand-thumbs-up"></i> Correct
+            </button>
+            <button id="feedbackNo" class="btn btn-danger feedback-btn">
+                <i class="bi bi-hand-thumbs-down"></i> Incorrect
+            </button>
+            </div>
+        `;
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .feedback-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+            transition: transform 0.15s, box-shadow 0.15s;
+            }
+        `;
+        document.head.appendChild(style);
+
     } catch (error) {
         result.innerHTML = `
             <div class="alert alert-danger">
