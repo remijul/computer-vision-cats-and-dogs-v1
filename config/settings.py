@@ -13,7 +13,8 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
 
 # Modèles
-MODELS_DIR = SRC_DIR / "models/trained"
+MODELS_DIR = PROCESSED_DATA_DIR / "models" # SRC_DIR / "models/trained"
+
 TEMP_DIR = Path(os.environ.get("TEMP_DIR", "/tmp/cats_dogs"))
 
 # Configuration du modèle
