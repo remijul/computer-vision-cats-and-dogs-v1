@@ -10,6 +10,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
+from src.utils.database import get_db_connection, close_db_connection
 
 # Fichier CSV pour stocker les métriques
 MONITORING_FILE = PROCESSED_DATA_DIR / "monitoring_inference.csv"
@@ -25,19 +26,22 @@ def ensure_monitoring_file():
                 'success'
             ])
 
-def log_inference_time(inference_time_ms: float, success: bool = True):
-    """Enregistrer une métrique d'inférence dans le CSV"""
-    ensure_monitoring_file()
-    
+def log_inference_time(inference_time_ms: float, success: bool) -> None:
+    """
+    Logger le temps d'inférence dans la base de données
+
+    Args:
+        inference_time_ms (float): Le temps d'inférence en millisecondes.
+        success (bool): Indique si l'inférence a réussi ou non.
+    """
     timestamp = datetime.now().isoformat()
-    
-    with open(MONITORING_FILE, 'a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            timestamp,
-            round(inference_time_ms, 2),
-            success
-        ])
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO logs (timestamp, inference_time_ms, success)
+            VALUES (?, ?, ?)
+        ''', (timestamp, inference_time_ms, success))
+        conn.commit()
 
 def time_inference(func):
     """Décorateur pour mesurer le temps d'inférence"""
