@@ -1,0 +1,30 @@
+# docker-compose.yml
+# Configuration PostgreSQL
+
+services:  
+# ===== BASE DE DONNÉES POSTGRESQL =====
+  postgres:
+    image: postgres:15                         # Version LTS stable
+    container_name: cont_bdd_feedback             # Nom fixe pour faciliter les commandes docker
+    ports:
+      - "5432:5432"                            # Port standard PostgreSQL (localhost:5432)
+    environment:
+      # Authentification et base par défaut
+      - POSTGRES_USER=${POSTGRES_USER}                   # Utilisateur principal
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}       # Mot de passe
+      - POSTGRES_DB=${POSTGRES_DB}                  # Base de données créée automatiquement
+      
+    volumes:
+      # Persistance des données PostgreSQL
+      - tpostgres_data:/var/lib/postgresql/data
+      
+    restart: unless-stopped                    # Redémarre automatiquement sauf si arrêté manuellement
+
+# ===== VOLUMES PERSISTANTS =====
+# Ces volumes stockent les données sur le disque dur local
+# Ils survivent aux arrêts/redémarrages des conteneurs
+volumes:
+  tpostgres_data:                               # Données PostgreSQL (tables, index, etc.)
+    driver: local
+
+

@@ -1,4 +1,4 @@
-# Créer un environnement virtuel et installer les dépendances
+### Créer un environnement virtuel et installer les dépendances
 
 ```bash
 python -m venv baseenv
@@ -12,8 +12,15 @@ ou executer directement dans un terminal
 . setup.sh
 ```
 
-# Démarrer le serveur fastAPI :
+### Démarrer le serveur fastAPI :
 ```bash
 python scripts/run_api.py 
 ```
-## Accès au serveur : http://127.0.0.1:8000
+# Accès au serveur : http://127.0.0.1:8000
+
+### Démarrage/arrêt des containers contenant le(s) Base(s) de données
+
+``` bash
+docker-compose up       # pour démarrer les containers
+# docker-compose down     # pour arrêter les containers
+```
