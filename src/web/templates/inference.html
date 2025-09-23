@@ -162,6 +162,43 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         `;
         document.head.appendChild(style);
 
+        // si on clique sur un bouton de feedback, on envoie un POST à /api/feedback, avec true ou false dans feedback selon le bouton, et l'image blob
+        document.getElementById('feedbackYes').addEventListener('click', async function() {
+            await sendFeedback(true);
+        });
+        document.getElementById('feedbackNo').addEventListener('click', async function() {
+            await sendFeedback(false);
+        });
+
+
+        async function sendFeedback(feedback) {
+            const formData = new FormData();
+            formData.append('log_id', data.log_id);
+            formData.append('feedback', feedback);
+            formData.append('predict_result', data.prediction);
+            formData.append('input_image', file); // file = image d'origine
+
+            const response = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+            const feedbackMsg = document.createElement('div');
+            feedbackMsg.className = 'mt-3';
+            if (response.ok) {
+                feedbackMsg.innerHTML = `<div class="alert alert-success">Feedback envoyé avec succès.</div>`;
+            } else {
+                feedbackMsg.innerHTML = `<div class="alert alert-danger">Erreur lors de l'envoi du feedback.</div>`;
+            }
+            // Supprime les anciens messages de feedback
+            const oldMsg = document.getElementById('feedbackMsg');
+            if (oldMsg) oldMsg.remove();
+            feedbackMsg.id = 'feedbackMsg';
+            feedbackButtons.appendChild(feedbackMsg);
+        }
+
     } catch (error) {
         result.innerHTML = `
             <div class="alert alert-danger">
