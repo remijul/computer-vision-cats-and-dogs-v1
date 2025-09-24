@@ -20,7 +20,14 @@ python scripts/run_api.py
 
 ### Démarrage/arrêt des containers contenant le(s) Base(s) de données
 
+# A voir car maintenant on peut ecrire docker compose ...
 ``` bash
 docker-compose up       # pour démarrer les containers
 # docker-compose down     # pour arrêter les containers
 ```
+
+# Création de la base de données
+```bash
+python scripts/init_db.py
+```
+

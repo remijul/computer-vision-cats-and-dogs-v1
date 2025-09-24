@@ -6,6 +6,7 @@ ROOT_DIR = Path(__file__).parent.parent
 SRC_DIR = ROOT_DIR / "src"
 DATA_DIR = ROOT_DIR / "data"
 CONFIG_DIR = ROOT_DIR / "config"
+LOG_DIR = ROOT_DIR / "monitoring"
 
 # Données
 RAW_DATA_DIR = DATA_DIR / "raw"
