@@ -54,7 +54,7 @@ jobs:
         DB_USER: testuser
         DB_PASSWORD: testpassword
         DB_NAME: testdb
-        API_TOKEN: ${{ secrets.API_TOKEN_TEST }}
+        API_TOKEN_TEST: ${{ secrets.API_TOKEN_TEST }}
       run: |
         python scripts/run_api.py &
         sleep 10

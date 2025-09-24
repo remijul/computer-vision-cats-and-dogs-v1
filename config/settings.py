@@ -33,7 +33,7 @@ MODEL_CONFIG = {
 API_CONFIG = {
     "host": "127.0.0.1",
     "port": 8001,
-    "token": os.environ.get("API_TOKEN", "?C@TS&D0GS!"),
+    "token": os.environ.get("API_TOKEN_TEST", "?C@TS&D0GS!"),
     "model_path": MODELS_DIR / "cats_dogs_model.keras",
 }
 
