@@ -11,6 +11,8 @@ jobs:
   test:
     # Utilise la dernière version d'Ubuntu comme environnement d'exécution
     runs-on: ubuntu-latest
+    # Lie ce job à l'environnement "cats_and_dogs" pour accéder aux secrets
+    environment: cats_and_dogs
 
     # Définition des services (conteneurs Docker) à lancer avec le job
     services:
