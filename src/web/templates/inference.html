@@ -185,17 +185,18 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
                 },
                 body: formData
             });
+
+            feedbackButtons.innerHTML = '';
+
             const feedbackMsg = document.createElement('div');
             feedbackMsg.className = 'mt-3';
             if (response.ok) {
                 feedbackMsg.innerHTML = `<div class="alert alert-success">Feedback envoyé avec succès.</div>`;
             } else {
-                feedbackMsg.innerHTML = `<div class="alert alert-danger">Erreur lors de l'envoi du feedback.</div>`;
+                const errorData = await response.json();
+                feedbackMsg.innerHTML = `<div class="alert alert-danger">Erreur lors de l'envoi du feedback: ${errorData.detail || 'Erreur inconnue'}</div>`;
             }
-            // Supprime les anciens messages de feedback
-            const oldMsg = document.getElementById('feedbackMsg');
-            if (oldMsg) oldMsg.remove();
-            feedbackMsg.id = 'feedbackMsg';
+
             feedbackButtons.appendChild(feedbackMsg);
         }
 
