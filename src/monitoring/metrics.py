@@ -48,6 +48,36 @@ def log_inference_time(inference_time_ms: float, success: bool):
         log_id = cursor.fetchone()[0]
     return log_id
 
+def log_user_feedback(log_id: int, feedback: bool, predict_result: str, input_image_bytes: bytes):
+    """
+    Logger le feedback utilisateur dans la base de données.
+
+    Args:
+        log_id (int): L'ID du log d'inférence associé.
+        feedback (bool): Le feedback utilisateur (True pour correct, False pour incorrect).
+        predict_result (str): Le résultat de la prédiction.
+        input_image_bytes (bytes): L'image d'entrée en bytes.
+    
+    Raises:
+        ValueError: Si le log_id n'existe pas.
+    """
+    timestamp = datetime.now().isoformat()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # Vérifier que le log_id existe
+        cursor.execute("SELECT id FROM logs WHERE id = %s", (log_id,))
+        if cursor.fetchone() is None:
+            raise ValueError(f"Le log avec l'ID {log_id} n'existe pas.")
+
+        cursor.execute('''
+            INSERT INTO feedbacks (log_id, feedback, timestamp, predict_result, input_image) 
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (log_id, feedback, timestamp, predict_result, input_image_bytes))
+        conn.commit()
+
+
+
+
 def time_inference(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):

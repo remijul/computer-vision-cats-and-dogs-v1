@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from .auth import verify_token
 from src.models.predictor import CatDogPredictor
-from src.monitoring.metrics import time_inference
+from src.monitoring.metrics import time_inference, log_user_feedback
 from src.utils.database import get_db_connection
 
 # Configuration des templates
@@ -102,20 +102,20 @@ async def submit_feedback(
     Returns:
         dict: Un message de confirmation.
     """
+    image_bytes = await input_image.read()
     try:
-        timestamp = datetime.now().isoformat()
-        image_bytes = await input_image.read()
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO feedbacks (log_id, feedback, timestamp, predict_result, input_image) 
-                VALUES (%s, %s, %s, %s, %s)
-            ''', (log_id, feedback, timestamp, predict_result, image_bytes))
-            conn.commit()
+        log_user_feedback(
+            log_id=log_id,
+            feedback=feedback,
+            predict_result=predict_result,
+            input_image_bytes=image_bytes
+        )
         return {"detail": "Feedback soumis avec succès."}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur serveur interne : {str(e)}")
-    
+
 
 @router.get("/api/info")
 async def api_info():
