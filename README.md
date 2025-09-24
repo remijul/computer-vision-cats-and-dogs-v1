@@ -1,11 +1,12 @@
 ### Créer un environnement virtuel et installer les dépendances
 
+
 ```bash
 python -m venv baseenv
 source baseenv/bin/activate
 pip install --upgrade pip
 pip install -r requirements/base.txt
-```
+
 
 ou executer directement dans un terminal
 ```bash
