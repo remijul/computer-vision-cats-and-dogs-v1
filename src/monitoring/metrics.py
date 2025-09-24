@@ -40,12 +40,12 @@ def log_inference_time(inference_time_ms: float, success: bool):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO logs (timestamp, inference_time_ms, success)
-            VALUES (?, ?, ?)
+            INSERT INTO logs (timestamp, inference_time_ms, success) 
+            VALUES (%s, %s, %s) RETURNING id
         ''', (timestamp, inference_time_ms, success))
         conn.commit()
-        # retourne l'id du log inséré
-        log_id = cursor.lastrowid
+        # Récupère l'ID retourné par la requête
+        log_id = cursor.fetchone()[0]
     return log_id
 
 def time_inference(func):

@@ -1,72 +1,63 @@
 import os
-import sqlite3
-from sqlite3 import Connection, Cursor
+import psycopg2
+from psycopg2.extensions import connection as Connection
+from config.settings import DB_SETTINGS
+import logging
 
-db_path = "data/database.db"
+def create_tables_if_not_exist(conn: Connection):
+    """Crée les tables 'logs' et 'feedbacks' si elles n'existent pas."""
+    with conn.cursor() as cursor:
+        # Création de la table logs
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS logs (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                inference_time_ms REAL NOT NULL,
+                success BOOLEAN NOT NULL
+            );
+        ''')
+        logging.info("Table 'logs' vérifiée/créée.")
+
+        # Création de la table feedbacks
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS feedbacks (
+                id SERIAL PRIMARY KEY,
+                feedback BOOLEAN NOT NULL,
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                predict_result TEXT NOT NULL,
+                input_image BYTEA NOT NULL,
+                log_id INTEGER NOT NULL,
+                FOREIGN KEY (log_id) REFERENCES logs(id)
+            );
+        ''')
+        logging.info("Table 'feedbacks' vérifiée/créée.")
+    conn.commit()
 
 def get_db_connection() -> Connection:
     """
-    Créer une base sqlite si elle n'existe pas et retourner une connexion.
+    Établit une connexion à la base de données PostgreSQL.
 
     Args:
-        db_path (str): Le chemin vers la base de données.
+        None
 
     Returns:
         Connection: La connexion à la base de données.
     """
-    if os.path.exists(db_path) == False:
-        open(db_path, 'w').close()
-    # si elles n'existent pas, créer les tables feedbacks et logs, seulement si les tables n'existent pas
-    if os.path.exists(db_path):
-        # vérifier les tables existantes
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT name FROM sqlite_master WHERE type='table' AND name='logs';
-        ''')
-        logs_table_exists = cursor.fetchone() is not None
-
-        cursor.execute('''
-            SELECT name FROM sqlite_master WHERE type='table' AND name='feedbacks';
-        ''')
-        feedbacks_table_exists = cursor.fetchone() is not None
-
-        cursor.close()
-
-        if not logs_table_exists:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute('''
-                CREATE TABLE logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                    inference_time_ms REAL NOT NULL,
-                    success BOOLEAN NOT NULL
-                )
-            ''')
-            conn.commit()
-            cursor.close()
-            print(
-                f"Table 'logs' created in database at {db_path} (if it doesn't exist).",
-            )
-        if not feedbacks_table_exists:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute('''
-                CREATE TABLE feedbacks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    feedback BOOLEAN NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                    predict_result TEXT NOT NULL,
-                    input_image BLOB NOT NULL,
-                    log_id INTEGER NOT NULL,
-                    FOREIGN KEY (log_id) REFERENCES logs(id)
-                )
-            ''')
-            conn.commit()
-            cursor.close()
-            print(
-                f"Table 'feedbacks' created in database at {db_path} (if it doesn't exist).",
-            )
-    conn = sqlite3.connect(db_path)
-    return conn
+    try:
+        conn = psycopg2.connect(
+            dbname=DB_SETTINGS["name"],
+            user=DB_SETTINGS["user"],
+            password=DB_SETTINGS["password"],
+            host=DB_SETTINGS["host"],
+            port=DB_SETTINGS["port"]
+        )
+        logging.info(f"Connexion à la base de données PostgreSQL sur {DB_SETTINGS['host']}:{DB_SETTINGS['port']} réussie.")
+        
+        # Au premier démarrage, on s'assure que les tables existent
+        create_tables_if_not_exist(conn)
+        
+        return conn
+    except psycopg2.OperationalError as e:
+        logging.error(f"Erreur de connexion à la base de données : {e}")
+        # Cette exception sera attrapée par FastAPI ou le code appelant
+        raise e

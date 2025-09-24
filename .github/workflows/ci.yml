@@ -11,6 +11,22 @@ jobs:
   test:
     # Utilise la dernière version d'Ubuntu comme environnement d'exécution
     runs-on: ubuntu-latest
+
+    # Définition des services (conteneurs Docker) à lancer avec le job
+    services:
+      postgres:
+        image: postgres:13-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     
     steps:
     # Étape 1 : Récupération du code source
@@ -27,24 +43,21 @@ jobs:
       run: |
         # Installation des dépendances de base du projet
         pip install -r requirements/base.txt
-        # Installation de pytest pour les tests (non inclus dans base.txt)
-        pip install pytest
-    
-    # Étape 4 : Préparation de l'environnement de test
-    - name: Setup test environment
-      run: |
-        # Création des répertoires nécessaires pour les tests
-        mkdir -p data/processed/models
-        # Création d'un fichier modèle factice pour les tests
-        # (évite les erreurs si l'API cherche ce fichier au démarrage)
-        touch data/processed/models/cats_dogs_model.keras
+        # Installation des dépendances pour les tests
+        pip install pytest pytest-asyncio
     
     # Étape 5 : Démarrage de l'API et exécution des tests
     - name: Start API and test
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: testuser
+        DB_PASSWORD: testpassword
+        DB_NAME: testdb
+        API_TOKEN: ${{ secrets.API_TOKEN_TEST }}
       run: |
-        # Démarrage de l'API en arrière-plan (&)
         python scripts/run_api.py &
-        # Attente de 10 secondes pour que l'API soit complètement démarrée
         sleep 10
         python tests/test_api_simple.py
         python tests/test_api.py
+        python tests/test_database.py

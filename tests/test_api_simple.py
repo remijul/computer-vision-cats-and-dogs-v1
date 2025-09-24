@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT_DIR))
 from config.settings import DATA_DIR, API_CONFIG
 
 # Configuration des tests
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8001"
 TOKEN = API_CONFIG["token"]  # Utilise le token de la config
 
 def test_quick_api_health():

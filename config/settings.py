@@ -1,11 +1,15 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Chemins de base
 ROOT_DIR = Path(__file__).parent.parent
 SRC_DIR = ROOT_DIR / "src"
 DATA_DIR = ROOT_DIR / "data"
 CONFIG_DIR = ROOT_DIR / "config"
+
+# Charger les variables d'environnement depuis un fichier .env (pour le dev local)
+load_dotenv()
 
 # Données
 RAW_DATA_DIR = DATA_DIR / "raw"
@@ -36,4 +40,13 @@ API_CONFIG = {
 # URLs de données
 DATA_URLS = {
     "kaggle_cats_dogs": "https://download.microsoft.com/download/3/E/1/3E1C3F21-ECDB-4869-8368-6DEBA77B919F/kagglecatsanddogs_5340.zip"
+}
+
+# Configuration de la base de données (lit les variables d'environnement)
+DB_SETTINGS = {
+    "name": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": os.getenv("DB_PORT", "5432"),
 }

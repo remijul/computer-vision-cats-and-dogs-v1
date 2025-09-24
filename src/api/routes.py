@@ -6,9 +6,6 @@ from datetime import datetime
 import sys
 from pathlib import Path
 import time
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
 
 # Ajouter le répertoire racine au path
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -112,8 +109,8 @@ async def submit_feedback(
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO feedbacks (log_id, feedback, timestamp, predict_result, input_image)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO feedbacks (log_id, feedback, timestamp, predict_result, input_image) 
+                VALUES (%s, %s, %s, %s, %s)
             ''', (log_id, feedback, timestamp, predict_result, image_bytes))
             conn.commit()
         return {"detail": "Feedback soumis avec succès."}
