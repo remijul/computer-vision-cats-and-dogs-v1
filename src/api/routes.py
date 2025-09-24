@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT_DIR))
 from .auth import verify_token
 from src.models.predictor import CatDogPredictor
 from src.monitoring.metrics import time_inference
-from src.utils.database import get_db_connection, close_db_connection
+from src.utils.database import get_db_connection
 
 # Configuration des templates
 TEMPLATES_DIR = ROOT_DIR / "src" / "web" / "templates"

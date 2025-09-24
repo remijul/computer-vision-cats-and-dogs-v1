@@ -6,6 +6,7 @@ import requests
 import sys
 from pathlib import Path
 import time
+import sqlite3
 
 # Ajouter le répertoire racine au path
 ROOT_DIR = Path(__file__).parent.parent

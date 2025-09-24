@@ -70,12 +70,3 @@ def get_db_connection() -> Connection:
             )
     conn = sqlite3.connect(db_path)
     return conn
-
-def close_db_connection(conn: Connection) -> None:
-    """
-    Fermer la connexion à la base de données.
-
-    Args:
-        conn (Connection): La connexion à la base de données.
-    """
-    conn.close()

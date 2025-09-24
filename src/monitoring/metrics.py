@@ -11,7 +11,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
-from src.utils.database import get_db_connection, close_db_connection
+from src.utils.database import get_db_connection
 from fastapi import HTTPException
  
 # Fichier CSV pour stocker les métriques
