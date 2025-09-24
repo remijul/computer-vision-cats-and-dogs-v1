@@ -60,6 +60,4 @@ jobs:
       run: |
         python scripts/run_api.py &
         sleep 10
-        python tests/test_api_simple.py
-        python tests/test_api.py
-        python tests/test_database.py
+        pytest

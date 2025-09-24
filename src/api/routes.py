@@ -103,7 +103,6 @@ async def submit_feedback(
         dict: Un message de confirmation.
     """
     try:
-        logging.debug("Route /api/feedback appelée")
         timestamp = datetime.now().isoformat()
         image_bytes = await input_image.read()
         with get_db_connection() as conn:
@@ -115,7 +114,6 @@ async def submit_feedback(
             conn.commit()
         return {"detail": "Feedback soumis avec succès."}
     except Exception as e:
-        logging.error(f"Erreur lors de l'enregistrement du feedback : {e}")
         raise HTTPException(status_code=500, detail=f"Erreur serveur interne : {str(e)}")
     
 
