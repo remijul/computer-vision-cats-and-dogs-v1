@@ -49,6 +49,12 @@ async def info_page(request: Request):
         "request": request, 
         "model_info": model_info
     })
+    
+@router.get("/privacy", response_class=HTMLResponse)
+async def read_privacy_policy(request: Request):
+    """Affiche la page de politique de confidentialité."""
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
 
 @router.get("/inference", response_class=HTMLResponse)
 async def inference_page(request: Request):
@@ -59,7 +65,7 @@ async def inference_page(request: Request):
     })
 
 @router.post("/api/predict")
-@time_inference  # Décorateur de monitoring
+@time_inference
 async def predict_api(
     file: UploadFile = File(...),
     token: str = Depends(verify_token)

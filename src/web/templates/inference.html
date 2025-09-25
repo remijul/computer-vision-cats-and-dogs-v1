@@ -49,6 +49,29 @@
                 <div id="result" class="mt-4" style="display: none;"></div>
                 <div id="feedbackButtons" class="mt-3"></div>
                 </div>
+
+                <div class="modal fade" id="consentModal" tabindex="-1" aria-labelledby="consentModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="consentModalLabel"><i class="bi bi-shield-check"></i> Consentement pour l'amélioration du service</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Pour nous aider à améliorer la précision de notre modèle, acceptez-vous que l'image que vous venez de tester soit stockée et utilisée de manière anonyme à des fins d'analyse et de ré-entraînement ?</p>
+                                <p>Votre vie privée est importante. Aucune information personnelle n'est conservée avec l'image.</p>
+                                <p>
+                                    <a href="/privacy" target="_blank">Consulter notre politique de confidentialité</a> pour plus de détails.
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" id="consentDecline">Refuser</button>
+                                <button type="button" class="btn btn-primary" id="consentAccept">Accepter et Envoyer</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {% endif %}
             </div>
         </div>
@@ -58,6 +81,11 @@
 
 {% block scripts %}
 <script>
+let currentFile = null;
+let currentToken = null;
+let currentPredictionData = null;
+
+
 document.getElementById('imageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
@@ -69,6 +97,7 @@ document.getElementById('imageFile').addEventListener('change', function(e) {
             preview.style.display = 'block';
         };
         reader.readAsDataURL(file);
+        currentFile = file;
     }
 });
 
@@ -82,11 +111,11 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
     const predictBtn = document.getElementById('predictBtn');
     const feedbackButtons = document.getElementById('feedbackButtons');
     
-    const file = fileInput.files[0];
-    const token = tokenInput.value;
+    currentFile = fileInput.files[0];
+    currentToken = tokenInput.value;
     
-    if (!file) {
-        alert('Veuillez sélectionner une image');
+    if (!currentFile) {
+        alert('Veuillez sélectionner une image.');
         return;
     }
     
@@ -96,12 +125,12 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
     
     try {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', currentFile);
         
         const response = await fetch('/api/predict', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${currentToken}`
             },
             body: formData
         });
@@ -109,6 +138,7 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         const data = await response.json();
         
         if (response.ok) {
+            currentPredictionData = data;
             const isDog = data.prediction === 'Dog';
             const emoji = isDog ? '🐶' : '🐱';
             const bgColor = isDog ? 'bg-warning' : 'bg-success';
@@ -141,63 +171,9 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         
         result.style.display = 'block';
 
-        // Boutons de feedback
-        feedbackButtons.innerHTML = `
-            <div class="d-flex justify-content-center">
-            <button id="feedbackYes" class="btn btn-success me-2 feedback-btn">
-                <i class="bi bi-hand-thumbs-up"></i> Correct
-            </button>
-            <button id="feedbackNo" class="btn btn-danger feedback-btn">
-                <i class="bi bi-hand-thumbs-down"></i> Incorrect
-            </button>
-            </div>
-        `;
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .feedback-btn:hover {
-            transform: scale(1.08);
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
-            transition: transform 0.15s, box-shadow 0.15s;
-            }
-        `;
-        document.head.appendChild(style);
-
-        // si on clique sur un bouton de feedback, on envoie un POST à /api/feedback, avec true ou false dans feedback selon le bouton, et l'image blob
-        document.getElementById('feedbackYes').addEventListener('click', async function() {
-            await sendFeedback(true);
-        });
-        document.getElementById('feedbackNo').addEventListener('click', async function() {
-            await sendFeedback(false);
-        });
-
-
-        async function sendFeedback(feedback) {
-            const formData = new FormData();
-            formData.append('log_id', data.log_id);
-            formData.append('feedback', feedback);
-            formData.append('predict_result', data.prediction);
-            formData.append('input_image', file); // file = image d'origine
-
-            const response = await fetch('/api/feedback', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
-
-            feedbackButtons.innerHTML = '';
-
-            const feedbackMsg = document.createElement('div');
-            feedbackMsg.className = 'mt-3';
-            if (response.ok) {
-                feedbackMsg.innerHTML = `<div class="alert alert-success">Feedback envoyé avec succès.</div>`;
-            } else {
-                const errorData = await response.json();
-                feedbackMsg.innerHTML = `<div class="alert alert-danger">Erreur lors de l'envoi du feedback: ${errorData.detail || 'Erreur inconnue'}</div>`;
-            }
-
-            feedbackButtons.appendChild(feedbackMsg);
+        // Afficher les boutons de feedback si la prédiction a réussi
+        if (response.ok) {
+            displayFeedbackButtons();
         }
 
     } catch (error) {
@@ -213,5 +189,86 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
     loading.style.display = 'none';
     predictBtn.disabled = false;
 });
+
+function displayFeedbackButtons() {
+    const feedbackButtons = document.getElementById('feedbackButtons');
+    feedbackButtons.innerHTML = `
+        <div class="d-flex justify-content-center">
+            <button id="feedbackYes" class="btn btn-success me-2 feedback-btn">
+                <i class="bi bi-hand-thumbs-up"></i> Correct
+            </button>
+            <button id="feedbackNo" class="btn btn-danger feedback-btn">
+                <i class="bi bi-hand-thumbs-down"></i> Incorrect
+            </button>
+        </div>
+    `;
+    
+    document.getElementById('feedbackYes').addEventListener('click', () => handleFeedbackClick(true));
+    document.getElementById('feedbackNo').addEventListener('click', () => handleFeedbackClick(false));
+}
+
+function handleFeedbackClick(isCorrect) {
+    const consentGiven = localStorage.getItem('image-consent-given');
+
+    if (consentGiven === 'true') {
+        sendFeedback(isCorrect);
+    } else {
+        const consentModal = new bootstrap.Modal(document.getElementById('consentModal'));
+        
+        const acceptBtn = document.getElementById('consentAccept');
+        const declineBtn = document.getElementById('consentDecline');
+
+        const newAcceptBtn = acceptBtn.cloneNode(true);
+        acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+        
+        const newDeclineBtn = declineBtn.cloneNode(true);
+        declineBtn.parentNode.replaceChild(newDeclineBtn, declineBtn);
+
+        newAcceptBtn.addEventListener('click', () => {
+            localStorage.setItem('image-consent-given', 'true');
+            sendFeedback(isCorrect);
+            consentModal.hide();
+        });
+
+        newDeclineBtn.addEventListener('click', () => {
+            consentModal.hide();
+        });
+
+        consentModal.show();
+    }
+}
+
+async function sendFeedback(feedback) {
+    const feedbackButtons = document.getElementById('feedbackButtons');
+    const formData = new FormData();
+    formData.append('log_id', currentPredictionData.log_id);
+    formData.append('feedback', feedback);
+    formData.append('predict_result', currentPredictionData.prediction);
+    formData.append('input_image', currentFile);
+
+    feedbackButtons.innerHTML = `<div class="alert alert-info mt-3">Envoi du feedback...</div>`;
+
+    try {
+        const response = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${currentToken}`
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            feedbackButtons.innerHTML = `<div class="alert alert-success mt-3">Merci ! Votre feedback a été envoyé.</div>`;
+        } else {
+            const errorData = await response.json();
+            feedbackButtons.innerHTML = `<div class="alert alert-danger mt-3">Erreur lors de l'envoi du feedback: ${errorData.detail || 'Erreur inconnue'}</div>`;
+            setTimeout(displayFeedbackButtons, 3000);
+        }
+    } catch (err) {
+        feedbackButtons.innerHTML = `<div class="alert alert-danger mt-3">Erreur réseau: ${err.message}</div>`;
+        setTimeout(displayFeedbackButtons, 3000);
+    }
+}
+
 </script>
 {% endblock %}

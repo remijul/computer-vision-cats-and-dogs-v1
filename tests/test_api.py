@@ -349,6 +349,7 @@ class TestFeedback:
     ("/health", 200),
     ("/info", 200),
     ("/inference", 200),
+    ("/privacy", 200),
     ("/api/info", 200),
     ("/docs", 200),
 ])
