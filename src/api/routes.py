@@ -82,11 +82,6 @@ async def predict_api(
             }
         }
         
-        return response_data
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
-
         # Logger les métriques
         log_inference_time(
             inference_time_ms=inference_time_ms,
@@ -95,7 +90,7 @@ async def predict_api(
             confidence=f"{result['confidence']:.2%}",
             success=True
         )
-        
+
         return response_data
         
     except Exception as e:
