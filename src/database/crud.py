@@ -36,16 +36,16 @@ def drop_tables():
 def insert_feedback(id, value, prob_cat, prob_dog):
     global engine
     
-    feedback = Feedback(id=id,feed_back_value=value, prob_cat=prob_cat, prob_dog=prob_dog, last_modified=get_utc_timestamp())
+    feedback = Feedback(id=id, feed_back_value=value, prob_cat=prob_cat, prob_dog=prob_dog, last_modified=get_utc_timestamp())
 
     with Session(engine) as conn:
         conn.add(feedback)
         conn.commit()
 
-def insert_monitoring(id, time, succes):
+def insert_monitoring(time, succes):
     global engine
 
-    monitoring = Monitoring(id=id, timestamp=get_utc_timestamp(), inference_time=time, succes=succes)
+    monitoring = Monitoring(timestamp=get_utc_timestamp(), inference_time=time, succes=succes)
 
     with Session(engine) as conn:
         conn.add(monitoring)
