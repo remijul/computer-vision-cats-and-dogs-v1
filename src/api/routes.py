@@ -56,22 +56,22 @@ async def inference_page(request: Request):
     })
 
 @router.post("/api/predict")
-@time_inference  # Décorateur de monitoring
+@time_inference  # Le décorateur s'occupe du logging
 async def predict_api(
     file: UploadFile = File(...),
     token: str = Depends(verify_token)
 ):
-    """API de prédiction avec monitoring"""
+    """API de prédiction avec monitoring en base de données."""
     if not predictor.is_loaded():
         raise HTTPException(status_code=503, detail="Modèle non disponible")
-    
+
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Format d'image invalide")
-    
+
     try:
         image_data = await file.read()
         result = predictor.predict(image_data)
-        
+
         response_data = {
             "filename": file.filename,
             "prediction": result["prediction"],
@@ -81,29 +81,12 @@ async def predict_api(
                 "dog": f"{result['probabilities']['dog']:.2%}"
             }
         }
-        
-        # Logger les métriques
-        log_inference_time(
-            inference_time_ms=inference_time_ms,
-            filename=file.filename,
-            prediction=result["prediction"],
-            confidence=f"{result['confidence']:.2%}",
-            success=True
-        )
 
+        # Le décorateur @time_inference s'occupe du logging
         return response_data
-        
+
     except Exception as e:
-        # En cas d'erreur, logger quand même le temps
-        end_time = time.perf_counter()
-        inference_time_ms = (end_time - start_time) * 1000
-        
-        log_inference_time(
-            inference_time_ms=inference_time_ms,
-            filename=file.filename if file else "unknown",
-            success=False
-        )
-        
+        # Le décorateur @time_inference logge automatiquement les erreurs
         raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
 
 @router.get("/api/info")
