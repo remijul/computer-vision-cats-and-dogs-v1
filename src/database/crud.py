@@ -3,24 +3,27 @@ from sqlalchemy import URL
 from sqlmodel import Field, SQLModel, create_engine, Session
 from datetime import datetime, timezone
 
-#Chargement en memoire et modification des metadata de l'ORM
+# Chargement en memoire et modification des metadata de l'ORM
 from .model import *
 
 def get_utc_timestamp():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
-# Création URL avec la fonction SQLAlchemy
+# Création URL de connexion avec la fonction SQLAlchemy
 POSTGRES_URL = URL.create(
     drivername="postgresql+psycopg2",
     username=DB_CONFIG["user"],
     password=DB_CONFIG["password"],
     host=DB_CONFIG["host"],
+    port=DB_CONFIG["port"],
     database=DB_CONFIG["name"],
 )
 
-engine = create_engine(POSTGRES_URL, echo=True)
+# Création du moteur de connexion
+engine = create_engine(POSTGRES_URL, echo=True) # `echo=True` pour afficher les logs SQL
 
 def create_tables():
+    """Crée toutes les tables définies dans les modèles SQLModel."""
     global engine
 
     SQLModel.metadata.create_all(engine)
