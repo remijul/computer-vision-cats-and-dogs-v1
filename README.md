@@ -133,6 +133,42 @@ project-name/
 └── pyproject.toml           # Configuration Python/packaging
 ```
 
+## ⚙️ Configuration
+
+### Variables d'environnement
+
+Copiez le fichier `.env.example` vers `.env` et ajustez les valeurs selon vos besoins :
+
+```bash
+cp .env.example .env
+```
+
+#### Configuration SQLite
+
+La base de données SQLite peut être configurée via ces variables d'environnement :
+
+- `DATABASE_TYPE` : Type de base de données (défaut: `sqlite`)
+- `DATABASE_PATH` : Chemin absolu vers le fichier `.db` (défaut: `feedbacks.db` dans le répertoire racine)
+- `DATABASE_URL` : URL de connexion SQLAlchemy (défaut: `sqlite:///feedbacks.db`)
+
+**Exemples de configuration :**
+
+```bash
+# Configuration par défaut (fichier dans le répertoire du projet)
+DATABASE_PATH=/chemin/vers/votre/projet/feedbacks.db
+DATABASE_URL=sqlite:////chemin/vers/votre/projet/feedbacks.db
+
+# Configuration avec un répertoire dédié aux données
+DATABASE_PATH=/var/data/cats_dogs/feedbacks.db
+DATABASE_URL=sqlite:////var/data/cats_dogs/feedbacks.db
+
+# Configuration Windows
+DATABASE_PATH=C:\Users\username\Documents\data\feedbacks.db
+DATABASE_URL=sqlite:///C:\Users\username\Documents\data\feedbacks.db
+```
+
+**Note :** Le fichier de base de données sera créé automatiquement s'il n'existe pas.
+
 ## 🛠️ Commandes utiles
 
 *Section minimaliste à faire évoluer.*
@@ -164,6 +200,47 @@ python scripts/run_api.py
 ... et utiliser l'application web :
 
 ![Web APP](/docs/img/web.png "Application web du projet")
+
+## 📊 Monitoring des Performances
+
+L'application inclut un système de monitoring complet pour suivre les performances du modèle :
+
+- **Temps d'inférence** : Mesure automatique du temps de traitement des images
+- **Taux de succès** : Suivi des requêtes réussies/échouées
+- **Feedback utilisateurs** : Collecte et analyse des retours utilisateurs
+- **Précision du modèle** : Calcul du taux de précision basé sur les feedbacks
+
+### Dashboard de Monitoring
+
+Accédez au dashboard : `http://localhost:8000/monitoring`
+
+Le dashboard affiche :
+- Métriques en temps réel (actualisation automatique toutes les 30 secondes)
+- Graphiques interactifs (répartition des prédictions, évolution des temps)
+- Historique des requêtes récentes
+- Statistiques de feedback utilisateurs
+- Possibilité de filtrer par période (1h, 6h, 24h, 7j)
+
+### API de Monitoring
+
+Endpoint REST : `GET /api/monitoring?hours=24`
+
+Retourne les métriques JSON complètes pour intégration externe.
+
+### Métriques Collectées
+
+**Inférence :**
+- Nombre total de requêtes
+- Taux de succès
+- Temps d'inférence moyen/min/max
+- Répartition des prédictions (Chat/Chien)
+- Taille des fichiers traités
+
+**Feedback :**
+- Nombre total de feedbacks
+- Taux de précision du modèle
+- Feedbacks positifs/négatifs
+- Historique des retours utilisateurs
 
 ## 📄 Licence
 

@@ -28,9 +28,16 @@ class CatDogPredictor:
             print(f"Erreur de chargement du modèle: {e}")
             self.model = None
     
-    def preprocess_image(self, image_data: bytes):
+    def preprocess_image(self, image_data):
         """Préprocessing de l'image"""
-        image = Image.open(io.BytesIO(image_data))
+        # Gérer les bytes ou BytesIO
+        if isinstance(image_data, bytes):
+            image = Image.open(io.BytesIO(image_data))
+        elif hasattr(image_data, 'read'):
+            # C'est un objet file-like (BytesIO, etc.)
+            image = Image.open(image_data)
+        else:
+            raise ValueError("Type de données d'image non supporté")
         
         if image.mode != 'RGB':
             image = image.convert('RGB')

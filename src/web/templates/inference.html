@@ -105,7 +105,11 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         
         const data = await response.json();
         
-        if (response.ok) {
+        if (!response.ok) {
+            throw new Error(data.detail?.message || data.detail || 'Erreur inconnue');
+        }
+        
+        if (data.prediction) {
             const isDog = data.prediction === 'Dog';
             const emoji = isDog ? '🐶' : '🐱';
             const bgColor = isDog ? 'bg-warning' : 'bg-success';
@@ -125,6 +129,17 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
                             🐶 Chien: ${data.probabilities.dog}
                         </div>
                     </div>
+                    <hr>
+                    <div class="text-center">
+                        <p class="mb-2"><strong>Était-ce correct ?</strong></p>
+                        <button class="btn btn-success me-2" onclick="submitFeedback('${data.prediction}', '${data.filename}', true)">
+                            <i class="bi bi-check-circle"></i> Correct
+                        </button>
+                        <button class="btn btn-danger" onclick="submitFeedback('${data.prediction}', '${data.filename}', false)">
+                            <i class="bi bi-x-circle"></i> Incorrect
+                        </button>
+                        <div id="feedbackStatus" class="mt-2" style="display: none;"></div>
+                    </div>
                 </div>
             `;
         } else {
@@ -139,10 +154,18 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         result.style.display = 'block';
         
     } catch (error) {
+        console.error('Error:', error);
+        let errorMessage = 'Erreur de connexion au serveur';
+        
+        if (error.name === 'SyntaxError') {
+            errorMessage = 'Erreur de réponse du serveur';
+        }
+        
         result.innerHTML = `
             <div class="alert alert-danger">
-                <h6>Erreur de connexion</h6>
-                <p>${error.message}</p>
+                <h6>Erreur</h6>
+                <p>${errorMessage}</p>
+                <small>Détails techniques: ${error.message}</small>
             </div>
         `;
         result.style.display = 'block';
@@ -151,5 +174,45 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
     loading.style.display = 'none';
     predictBtn.disabled = false;
 });
+
+async function submitFeedback(prediction, filename, isCorrect) {
+    const feedbackStatus = document.getElementById('feedbackStatus');
+    const token = document.getElementById('apiToken').value;
+    
+    feedbackStatus.style.display = 'block';
+    feedbackStatus.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Envoi en cours...';
+    
+    try {
+        const response = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                prediction_result: prediction,
+                user_input: filename,
+                feedback_value: isCorrect ? 'oui' : 'non'
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            feedbackStatus.innerHTML = `
+                <div class="alert alert-success py-2">
+                    <i class="bi bi-check-circle"></i> Merci pour votre feedback !
+                </div>
+            `;
+        } else {
+            throw new Error('Erreur lors de l\'envoi du feedback');
+        }
+    } catch (error) {
+        feedbackStatus.innerHTML = `
+            <div class="alert alert-danger py-2">
+                <i class="bi bi-exclamation-triangle"></i> Erreur : ${error.message}
+            </div>
+        `;
+    }
+}
 </script>
 {% endblock %}
