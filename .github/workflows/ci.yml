@@ -14,7 +14,8 @@ jobs:
     
     steps:
     # Étape 1 : Récupération du code source
-    - uses: actions/checkout@v4  # Action officielle pour cloner le repository
+    - name: Clone repository
+      uses: actions/checkout@v4  # Action officielle pour cloner le repository
     
     # Étape 2 : Configuration de l'environnement Python
     - name: Set up Python

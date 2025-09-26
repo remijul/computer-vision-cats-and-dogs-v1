@@ -19,7 +19,10 @@
 ## 📌 Introduction
 
 Ce projet est à vocation pédagogique sur des thématiques IA et MLOps. Il permet de réaliser des tâches de Computer Vision et spécifiquement de la classification d'images par la reconnaissance de chats et de chiens.  
-Il est composé de :
+
+Il s'agit de la version 1 du projet, dans une série de 3 versions, la version 2 a pour objectif de développer une solution de monitoring (incluant le "human feedback loop") et la version 3 de proposer une solution ML Ops avancée (monitoring avancé, tests automatisés et déploiement continu).
+
+Ce projet est composé de :
 
 - Un modèle de computer vision développé avec Keras 3 selon une architecture CNN. Voir le tutoriel Keras ([lien](https://keras.io/examples/vision/image_classification_from_scratch/)).
 - Un service API développé avec Fast API, qui permet notamment de réaliser les opérations d'inférence (i.e prédiction), sur la route `/api/predict`.
