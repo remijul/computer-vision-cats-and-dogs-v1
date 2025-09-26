@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Feedbacks - Cats vs Dogs Classifier{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i> Historique des Feedbacks
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">
+                    <strong>Erreur :</strong> {{ error }}
+                </div>
+                {% else %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Statistiques des Feedbacks</h6>
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="card text-center bg-success text-white">
+                                    <div class="card-body py-2">
+                                        <h4>{{ total_feedbacks }}</h4>
+                                        <small>Total</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card text-center bg-primary text-white">
+                                    <div class="card-body py-2">
+                                        <h4 id="positiveCount">0</h4>
+                                        <small>Corrects</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card text-center bg-danger text-white">
+                                    <div class="card-body py-2">
+                                        <h4 id="negativeCount">0</h4>
+                                        <small>Incorrects</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Actions</h6>
+                        <button class="btn btn-outline-primary me-2" onclick="refreshFeedbacks()">
+                            <i class="bi bi-arrow-clockwise"></i> Actualiser
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="exportFeedbacks()">
+                            <i class="bi bi-download"></i> Exporter CSV
+                        </button>
+                    </div>
+                </div>
+
+                {% if feedbacks %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Feedback</th>
+                                <th>Date</th>
+                                <th>Prédiction</th>
+                                <th>Fichier</th>
+                                <th>Créé le</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for feedback in feedbacks %}
+                            <tr>
+                                <td>{{ feedback.id }}</td>
+                                <td>
+                                    {% if feedback.feedback_value == 'Oui' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Correct
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i> Incorrect
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ feedback.date }}</td>
+                                <td>
+                                    {% if feedback.prediction_result == 'Dog' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-emoji-smile"></i> Chien
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-emoji-heart-eyes"></i> Chat
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ feedback.user_input }}</small></td>
+                                <td><small>{{ feedback.created_at }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Aucun feedback enregistré pour le moment.
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshFeedbacks() {
+    location.reload();
+}
+
+function exportFeedbacks() {
+    // Simple CSV export
+    const table = document.querySelector('table');
+    if (!table) {
+        alert('Aucune donnée à exporter');
+        return;
+    }
+
+    let csv = 'ID,Feedback,Date,Prédiction,Fichier,Créé le\n';
+    const rows = table.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const rowData = [];
+        cells.forEach(cell => {
+            // Get text content, remove extra whitespace
+            let text = cell.textContent.trim();
+            // Remove icons and badges styling for clean text
+            text = text.replace(/[\u00A0-\u9999<>&;]/g, ''); // Remove HTML entities and tags
+            rowData.push('"' + text + '"');
+        });
+        csv += rowData.join(',') + '\n';
+    });
+
+    // Download CSV
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'feedbacks_' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Calculate statistics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const rows = document.querySelectorAll('tbody tr');
+    let positive = 0;
+    let negative = 0;
+
+    rows.forEach(row => {
+        const feedbackCell = row.querySelector('td:nth-child(2)');
+        if (feedbackCell && feedbackCell.textContent.includes('Correct')) {
+            positive++;
+        } else if (feedbackCell && feedbackCell.textContent.includes('Incorrect')) {
+            negative++;
+        }
+    });
+
+    document.getElementById('positiveCount').textContent = positive;
+    document.getElementById('negativeCount').textContent = negative;
+});
+</script>
+{% endblock %}

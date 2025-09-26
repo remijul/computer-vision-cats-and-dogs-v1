@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}Monitoring - Cats vs Dogs Classifier{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up"></i> Monitoring des Performances
+                </h5>
+                <div>
+                    <button class="btn btn-light btn-sm me-2" onclick="refreshMetrics()">
+                        <i class="bi bi-arrow-clockwise"></i> Actualiser
+                    </button>
+                    <select class="form-select form-select-sm d-inline-block w-auto" id="timeRange" onchange="changeTimeRange()">
+                        <option value="1">Dernière heure</option>
+                        <option value="6">6 heures</option>
+                        <option value="24" selected>24 heures</option>
+                        <option value="168">7 jours</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                {% if metrics.error %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> {{ metrics.error }}
+                    </div>
+                {% else %}
+                    <!-- Métriques d'inférence -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-cpu"></i> Métriques d'Inférence
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center bg-primary text-white">
+                                <div class="card-body py-3">
+                                    <h4 id="totalRequests">{{ metrics.inference.total_requests }}</h4>
+                                    <small>Total Requêtes</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-center bg-success text-white">
+                                <div class="card-body py-3">
+                                    <h4 id="successRate">
+                                        {% if metrics.inference.total_requests > 0 %}
+                                            {{ "%.1f"|format((metrics.inference.successful_requests / metrics.inference.total_requests * 100)) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </h4>
+                                    <small>Taux de Succès</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-center bg-warning text-dark">
+                                <div class="card-body py-3">
+                                    <h4 id="avgTime">{{ "%.1f"|format(metrics.inference.avg_inference_time) }}ms</h4>
+                                    <small>Temps Moyen</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-center bg-info text-white">
+                                <div class="card-body py-3">
+                                    <h4 id="maxTime">{{ "%.1f"|format(metrics.inference.max_inference_time) }}ms</h4>
+                                    <small>Temps Max</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Métriques de feedback -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <h6 class="text-success mb-3">
+                                <i class="bi bi-chat-dots"></i> Métriques de Feedback Utilisateur
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center bg-success text-white">
+                                <div class="card-body py-3">
+                                    <h4 id="totalFeedbacks">{{ metrics.feedback.total_feedbacks }}</h4>
+                                    <small>Total Feedbacks</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-center bg-primary text-white">
+                                <div class="card-body py-3">
+                                    <h4 id="accuracyRate">{{ "%.1f"|format(metrics.feedback.accuracy_rate) }}%</h4>
+                                    <small>Précision Modèle</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-center bg-info text-white">
+                                <div class="card-body py-3">
+                                    <h4 id="positiveFeedbacks">{{ metrics.feedback.positive_feedbacks }}</h4>
+                                    <small>Corrects</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-center bg-danger text-white">
+                                <div class="card-body py-3">
+                                    <h4 id="negativeFeedbacks">{{ metrics.feedback.negative_feedbacks }}</h4>
+                                    <small>Incorrects</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Graphiques -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Répartition des Prédictions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="predictionsChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Temps d'Inférence (ms)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="inferenceTimeChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tableaux -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Historique des Prédictions</h6>
+                                    <small class="text-muted">Toutes les requêtes de classification d'images</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Heure</th>
+                                                    <th>Prédiction</th>
+                                                    <th>Temps</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="recentRequestsTable">
+                                                {% for req in metrics.inference.recent_requests %}
+                                                    <tr>
+                                                        <td><small>{{ req.timestamp.split('T')[1][:8] }}</small></td>
+                                                        <td>{{ req.prediction }}</td>
+                                                        <td>{{ "%.1f"|format(req.inference_time) }}ms</td>
+                                                        <td>
+                                                            {% if req.success %}
+                                                                <span class="badge bg-success">OK</span>
+                                                            {% else %}
+                                                                <span class="badge bg-danger">Erreur</span>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Validation des Prédictions</h6>
+                                    <small class="text-muted">Retours utilisateurs sur la précision du modèle</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Heure</th>
+                                                    <th>Résultat</th>
+                                                    <th>Prédiction</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="recentFeedbacksTable">
+                                                {% for fb in metrics.feedback.recent_feedbacks %}
+                                                    <tr>
+                                                        <td><small>{{ fb.timestamp.split('T')[1][:8] }}</small></td>
+                                                        <td>
+                                                            {% if fb.feedback_value in ['oui', '1', 'true', 'correct'] %}
+                                                                <span class="badge bg-success">Correct</span>
+                                                            {% else %}
+                                                                <span class="badge bg-danger">Incorrect</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>{{ fb.prediction }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let predictionsChart = null;
+let inferenceTimeChart = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupération des données initiales depuis le template
+    const initialPredictions = {{ metrics.inference.predictions|tojson|safe }};
+    const initialTimeSeries = {{ metrics.inference.time_series|tojson|safe }};
+
+    // Initialisation des contextes des graphiques
+    const predictionsCtx = document.getElementById('predictionsChart').getContext('2d');
+    const inferenceTimeCtx = document.getElementById('inferenceTimeChart').getContext('2d');
+
+    // Données par défaut pour le graphique des prédictions
+    const defaultPredictions = {
+        'Chat': 0,
+        'Chien': 0
+    };
+    
+    // Utilisation des données réelles si disponibles, sinon utilisation des valeurs par défaut
+    const predictionData = Object.keys(initialPredictions).length > 0 ? initialPredictions : defaultPredictions;
+    
+    // Initialisation du graphique des prédictions
+    predictionsChart = new Chart(predictionsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(predictionData),
+            datasets: [{
+                data: Object.values(predictionData),
+                backgroundColor: ['#FF6384', '#36A2EB'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? (value / total * 100).toFixed(1) + '%' : '0%';
+                            return `${context.label}: ${value} (${percentage})`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Initialisation du graphique des temps d'inférence
+    inferenceTimeChart = new Chart(inferenceTimeCtx, {
+        type: 'line',
+        data: {
+            labels: initialTimeSeries.map(item => item.timestamp.split('T')[1].substring(0, 8)),
+            datasets: [{
+                label: 'Temps d\'inférence (ms)',
+                data: initialTimeSeries.map(item => item.inference_time),
+                borderColor: '#36A2EB',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+
+async function refreshMetrics() {
+    const timeRange = document.getElementById('timeRange').value;
+
+    try {
+        const response = await fetch(`/api/monitoring?hours=${timeRange}`);
+        const data = await response.json();
+
+        if (data.error) {
+            alert('Erreur: ' + data.error);
+            return;
+        }
+
+        // Mise à jour des métriques du tableau de bord
+        updateDashboardMetrics(data);
+        
+        // Mise à jour des tableaux
+        updateRecentRequests(data.inference.recent_requests);
+        updateRecentFeedbacks(data.feedback.recent_feedbacks);
+        
+        // Mise à jour des graphiques
+        updateChartsWithData(data);
+
+    } catch (error) {
+        console.error('Erreur lors du rafraîchissement:', error);
+        alert('Erreur lors du rafraîchissement des données');
+    }
+}
+
+function updateDashboardMetrics(data) {
+    // Mise à jour des métriques d'inférence
+    document.getElementById('totalRequests').textContent = data.inference.total_requests;
+    document.getElementById('successRate').textContent = 
+        data.inference.total_requests > 0 
+            ? (data.inference.successful_requests / data.inference.total_requests * 100).toFixed(1) + '%' 
+            : '0%';
+    document.getElementById('avgTime').textContent = data.inference.avg_inference_time.toFixed(1) + 'ms';
+    document.getElementById('maxTime').textContent = data.inference.max_inference_time.toFixed(1) + 'ms';
+
+    // Mise à jour des métriques de feedback
+    document.getElementById('totalFeedbacks').textContent = data.feedback.total_feedbacks;
+    document.getElementById('accuracyRate').textContent = data.feedback.accuracy_rate.toFixed(1) + '%';
+    document.getElementById('positiveFeedbacks').textContent = data.feedback.positive_feedbacks;
+    document.getElementById('negativeFeedbacks').textContent = data.feedback.negative_feedbacks;
+}
+
+function updateRecentRequests(requests) {
+    const tbody = document.getElementById('recentRequestsTable');
+    tbody.innerHTML = requests.map(req => `
+        <tr>
+            <td><small>${req.timestamp.split('T')[1].substring(0, 8)}</small></td>
+            <td>${req.prediction}</td>
+            <td>${req.inference_time.toFixed(1)}ms</td>
+            <td>
+                ${req.success 
+                    ? '<span class="badge bg-success">OK</span>' 
+                    : '<span class="badge bg-danger">Erreur</span>'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateRecentFeedbacks(feedbacks) {
+    const tbody = document.getElementById('recentFeedbacksTable');
+    tbody.innerHTML = feedbacks.map(fb => `
+        <tr>
+            <td><small>${fb.timestamp.split('T')[1].substring(0, 8)}</small></td>
+            <td>
+                ${['oui', '1', 'true', 'correct'].includes(fb.feedback_value.toLowerCase())
+                    ? '<span class="badge bg-success">Correct</span>'
+                    : '<span class="badge bg-danger">Incorrect</span>'}
+            </td>
+            <td>${fb.prediction}</td>
+        </tr>
+    `).join('');
+}
+
+function updateChartsWithData(data) {
+    // Mise à jour du graphique des prédictions
+    const defaultPredictions = {
+        'Chat': 0,
+        'Chien': 0
+    };
+    
+    const predictionData = Object.keys(data.inference.predictions).length > 0 
+        ? data.inference.predictions 
+        : defaultPredictions;
+
+    if (predictionsChart) {
+        predictionsChart.data.labels = Object.keys(predictionData);
+        predictionsChart.data.datasets[0].data = Object.values(predictionData);
+        predictionsChart.update();
+    }
+
+    // Mise à jour du graphique des temps d'inférence
+    if (inferenceTimeChart) {
+        const timeSeries = data.inference.time_series;
+        const timeLabels = timeSeries.map(item => item.timestamp.split('T')[1].substring(0, 8));
+        const timeValues = timeSeries.map(item => item.inference_time);
+        
+        inferenceTimeChart.data.labels = timeLabels;
+        inferenceTimeChart.data.datasets[0].data = timeValues;
+        inferenceTimeChart.update();
+    }
+}
+
+function changeTimeRange() {
+    refreshMetrics();
+}
+
+// Actualisation automatique toutes les 30 secondes
+setInterval(refreshMetrics, 30000);
+</script>
+{% endblock %}

@@ -1,6 +1,16 @@
 import os
 from pathlib import Path
 
+# Charger les variables d'environnement depuis .env si disponible
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"✅ Variables d'environnement chargées depuis {env_path}")
+except ImportError:
+    print("⚠️  python-dotenv non installé, utilisation des variables d'environnement système uniquement")
+
 # Chemins de base
 ROOT_DIR = Path(__file__).parent.parent
 SRC_DIR = ROOT_DIR / "src"
@@ -36,4 +46,11 @@ API_CONFIG = {
 # URLs de données
 DATA_URLS = {
     "kaggle_cats_dogs": "https://download.microsoft.com/download/3/E/1/3E1C3F21-ECDB-4869-8368-6DEBA77B919F/kagglecatsanddogs_5340.zip"
+}
+
+# Configuration de la base de données
+DATABASE_CONFIG = {
+    "type": os.environ.get("DATABASE_TYPE", "sqlite"),
+    "path": os.environ.get("DATABASE_PATH", str(ROOT_DIR / "feedbacks.db")),
+    "url": os.environ.get("DATABASE_URL", f"sqlite:///{ROOT_DIR / 'feedbacks.db'}")
 }
