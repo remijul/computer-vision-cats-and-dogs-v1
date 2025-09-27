@@ -175,10 +175,15 @@ async def predict_api(
         
         print(f"DÉBUG: Réponse préparée: {response_data}")
         
-        # Logger les métriques
+        # Logger les métriques avec tous les détails
+        from src.monitoring.advanced_metrics import log_inference_time
         log_inference_time(
             inference_time_ms=inference_time_ms,
-            success=True
+            success=True,
+            prediction=result["prediction"],
+            confidence=result["confidence"],
+            file_size_bytes=len(image_data),
+            user_agent=request.headers.get("user-agent", "")
         )
         
         return response_data
@@ -192,9 +197,13 @@ async def predict_api(
         import traceback
         traceback.print_exc()
         
+        from src.monitoring.advanced_metrics import log_inference_time
         log_inference_time(
             inference_time_ms=inference_time_ms,
-            success=False
+            success=False,
+            error=str(e),
+            file_size_bytes=len(image_data) if 'image_data' in locals() else 0,
+            user_agent=request.headers.get("user-agent", "")
         )
         
         raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")

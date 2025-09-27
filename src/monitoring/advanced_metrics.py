@@ -46,13 +46,57 @@ def ensure_feedback_metrics_file():
                 'response_time_ms'
             ])
 
+def get_db_connection():
+    """Retourne une connexion à la base de données SQLite"""
+    import sqlite3
+    db_path = str(ROOT_DIR / "feedbacks.db")
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row  # Pour avoir des résultats sous forme de dictionnaires
+    return conn
+
+def ensure_monitoring_table():
+    """S'assurer que la table monitoring_metrics existe"""
+    import sqlite3
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Vérifier si la table existe déjà
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='monitoring_metrics'")
+    if cursor.fetchone() is None:
+        print("Création de la table monitoring_metrics...")
+        # Créer la table si elle n'existe pas
+        cursor.execute('''
+        CREATE TABLE monitoring_metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            inference_time_ms FLOAT NOT NULL,
+            success BOOLEAN NOT NULL,
+            prediction TEXT,
+            confidence FLOAT,
+            file_size_bytes INTEGER,
+            user_agent TEXT,
+            error TEXT,
+            timestamp DATETIME NOT NULL
+        )
+        ''')
+        
+        # Créer les index pour optimiser les requêtes
+        cursor.execute('CREATE INDEX idx_metrics_timestamp ON monitoring_metrics(timestamp)')
+        cursor.execute('CREATE INDEX idx_metrics_success ON monitoring_metrics(success)')
+        
+        print("Table monitoring_metrics créée avec succès!")
+    
+    conn.commit()
+    conn.close()
+
 def log_inference_time(inference_time_ms: float, success: bool = True, prediction: str = None,
-                      confidence: float = None, file_size_bytes: int = None, user_agent: str = None):
-    """Enregistrer une métrique d'inférence dans le CSV"""
+                      confidence: float = None, file_size_bytes: int = None, user_agent: str = None, error: str = None):
+    """Enregistrer une métrique d'inférence dans le CSV et dans la base de données SQLite"""
     ensure_monitoring_file()
+    ensure_monitoring_table()  # S'assurer que la table SQL existe
 
     timestamp = datetime.now().isoformat()
 
+    # Enregistrement dans le fichier CSV
     with open(MONITORING_FILE, 'a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -64,6 +108,32 @@ def log_inference_time(inference_time_ms: float, success: bool = True, predictio
             file_size_bytes or '',
             user_agent or ''
         ])
+    
+    # Enregistrement dans la base de données SQLite
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO monitoring_metrics 
+            (inference_time_ms, success, prediction, confidence, file_size_bytes, user_agent, error, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            round(inference_time_ms, 2),
+            success,
+            prediction,
+            confidence,
+            file_size_bytes,
+            user_agent,
+            error,
+            timestamp
+        ))
+        
+        conn.commit()
+        conn.close()
+        print(f"✅ Métrique d'inférence enregistrée dans la base de données: {timestamp}, {inference_time_ms}ms")
+    except Exception as e:
+        print(f"❌ Erreur lors de l'enregistrement des métriques dans la base de données: {e}")
 
 def log_feedback_metrics(feedback_value: str, prediction_result: str, user_input: str,
                         response_time_ms: float = None):
